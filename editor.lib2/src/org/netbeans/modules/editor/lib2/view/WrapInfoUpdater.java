@@ -101,14 +101,16 @@ final class WrapInfoUpdater {
         wrapTypeWords = (docView.op.getLineWrapType() == LineWrapType.WORD_BOUND);
         float visibleWidth = docView.op.getVisibleRect().width;
         TextLayout lineContinuationTextLayout = docView.op.getLineContinuationCharTextLayout();
+        final float lineContTextLayoutAdvance =
+            lineContinuationTextLayout == null ? 0f : lineContinuationTextLayout.getAdvance();
         // Make reasonable minimum width so that the number of visual lines does not double suddenly
         // when user would minimize the width too much. Also have enough space for line continuation mark
-        availableWidth = Math.max(visibleWidth - lineContinuationTextLayout.getAdvance(),
+        availableWidth = Math.max(visibleWidth - lineContTextLayoutAdvance,
                 docView.op.getDefaultCharWidth() * 4);
         logMsgBuilder = LOG.isLoggable(Level.FINE) ? new StringBuilder(100) : null;
         if (logMsgBuilder != null) {
             logMsgBuilder.append("Building wrapLines: availWidth=").append(availableWidth); // NOI18N
-            logMsgBuilder.append(", lineContCharWidth=").append(lineContinuationTextLayout.getAdvance()); // NOI18N
+            logMsgBuilder.append(", lineContCharWidth=").append(lineContTextLayoutAdvance); // NOI18N
             logMsgBuilder.append("\n"); // NOI18N
         }
         try {
@@ -131,7 +133,7 @@ final class WrapInfoUpdater {
                         WordInfo wordInfo = getWordInfo(viewOrPartStartOffset, wrapLineStartOffset);
                         if (wordInfo != null) {
                             // Attempt to break the view (at word boundary) so that it fits.
-                            ViewSplit split = breakView(viewOrPart, false);
+                            ViewSplit split = breakView(viewOrPart, true);
                             if (split != null) {
                                 addPart(split.startPart);
                                 finishWrapLine();
@@ -176,7 +178,11 @@ final class WrapInfoUpdater {
                     }
                     
                     if (regularBreak) {
-                        ViewSplit split = breakView(viewOrPart, false);
+                        /* Use allowWider=true here, so that long words are allowed to extend beyond
+                        the preferred wrap width. Turning it off would just give up on breaking
+                        entirely for the rest of the paragraph, yielding an even longer physical
+                        line. */
+                        ViewSplit split = breakView(viewOrPart, true);
                         if (split != null) {
                             addPart(split.startPart);
                             viewOrPart = split.endPart;
@@ -601,6 +607,10 @@ final class WrapInfoUpdater {
             return wordStartOffset;
         }
 
+        @Override
+        public String toString() {
+            return "WordInfo(" + wordStartOffset() + ", " + wordEndOffset() + ")";
+        }
     }
 
 
