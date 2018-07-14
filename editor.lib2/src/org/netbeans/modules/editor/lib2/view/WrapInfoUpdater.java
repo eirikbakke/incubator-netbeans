@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.View;
 import org.netbeans.lib.editor.util.swing.DocumentUtilities;
 
@@ -186,14 +187,41 @@ final class WrapInfoUpdater {
                         if (split != null) {
                             addPart(split.startPart);
                             viewOrPart = split.endPart;
-                            finishWrapLine();
                         } else { // break failed
                             if (!wrapLineNonEmpty) {
                                 addViewOrPart(viewOrPart);
                                 viewOrPart = fetchNextView();
                             }
-                            finishWrapLine();
                         }
+                        /* Keep the NewlineView that follows each paragraph together with the
+                        paragraph's last wrap line. Otherwise, the NewlineView might wrap to the
+                        next physical line if the last wrap line of the paragraph happens to be
+                        exactly as long as the availableWidth. This would make the text caret, if
+                        positioned at the end of a paragraph, end up being visually positioned on
+                        the beginning of the next line instead of at the end of the current one. */
+                        if (viewOrPart != null && viewOrPart.view instanceof NewlineView) {
+                            /* One exception: If the wrap line ends with a space, it's actually
+                            better to allow the NewlineView, and thus the text caret, to wrap to the
+                            next physical line, since this is where the user's next typed character
+                            will end up. This also avoids the need to position the caret outside the
+                            viewport in a few cases (due to the text wrapping policy of allowing
+                            whitespace characters at the end of each wrap line to extend beyond the
+                            preferred wrap width). */
+                            boolean wrapLineEndsWithSpace = false;
+                            try {
+                                int newlineOffset = viewOrPart.view.getStartOffset();
+                                wrapLineEndsWithSpace = newlineOffset > 0 &&
+                                    Character.isWhitespace(viewOrPart.view.getDocument()
+                                    .getText(newlineOffset - 1, 1).charAt(0));
+                            } catch (BadLocationException e) {
+                                // Ignore.
+                            }
+                            if (!wrapLineEndsWithSpace) {
+                                addViewOrPart(viewOrPart);
+                                viewOrPart = fetchNextView();
+                            }
+                        }
+                        finishWrapLine();
                     }
                 }
             } while (childIndex < pView.getViewCount());
