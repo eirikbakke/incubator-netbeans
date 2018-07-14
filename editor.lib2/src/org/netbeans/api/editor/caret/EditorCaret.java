@@ -25,7 +25,6 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Composite;
-import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -71,7 +70,6 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.TransferHandler;
-import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -87,7 +85,6 @@ import javax.swing.text.JTextComponent;
 import javax.swing.text.NavigationFilter;
 import javax.swing.text.Position;
 import javax.swing.text.StyleConstants;
-import javax.swing.text.Utilities;
 import org.netbeans.api.annotations.common.CheckForNull;
 import org.netbeans.api.annotations.common.NonNull;
 import org.netbeans.api.annotations.common.NullAllowed;
@@ -1028,21 +1025,17 @@ public final class EditorCaret implements Caret {
      * For that, the nearest update must reposition scroller's viewrect so that the 
      * recomputed caretBounds is at the same
      */
-    private synchronized void maybeSaveCaretOffset(JTextComponent c, Rectangle cbounds) {
-        if (c.getClientProperty("editorcaret.updateRetainsVisibleOnce")  == null || // NOI18N
+    private synchronized void maybeSaveCaretOffset(Rectangle cbounds) {
+        if (component.getClientProperty("editorcaret.updateRetainsVisibleOnce")  == null || // NOI18N
             lastCaretVisualOffset != -1) {
            return; 
         }
-        Component parent = c.getParent();
         Rectangle editorRect;
-        if (parent instanceof JLayeredPane) {
-            parent = parent.getParent();
-        }
-        if (parent instanceof JViewport) {
-            final JViewport viewport = (JViewport) parent;
+        final JViewport viewport = getViewport();
+        if (viewport != null) {
             editorRect = viewport.getViewRect();
         } else {
-            Dimension size = c.getSize();
+            Dimension size = component.getSize();
             editorRect = new Rectangle(0, 0, size.width, size.height);
         }
         if (cbounds.y >= editorRect.y && cbounds.y < (editorRect.y + editorRect.height)) {
@@ -1059,7 +1052,7 @@ public final class EditorCaret implements Caret {
 
     @Override
     public void paint(Graphics g) {
-        JTextComponent c = component;
+        final JTextComponent c = component;
         if (c == null || !isShowing()) {
             return;
         }
@@ -1109,7 +1102,7 @@ public final class EditorCaret implements Caret {
                         Rectangle newCaretBounds = lvh.modelToViewBounds(dot, Position.Bias.Forward);
                         Rectangle oldBounds = caretItem.setCaretBoundsWithRepaint(newCaretBounds, c, "EditorCaret.paint()", i);
                         if (caretItem == lastCaret && oldBounds != null) {
-                            maybeSaveCaretOffset(c, oldBounds);
+                            maybeSaveCaretOffset(oldBounds);
                         }
                     }
                     Rectangle caretBounds = caretItem.getCaretBounds();
@@ -1956,6 +1949,14 @@ public final class EditorCaret implements Caret {
      */
     private int lastCaretVisualOffset = -1;
 
+    private JViewport getViewport() {
+        Component parent = component.getParent();
+        if (parent instanceof JLayeredPane) {
+            parent = parent.getParent();
+        }
+        return (parent instanceof JViewport) ? (JViewport) parent : null;
+    }
+
     /**
      * Update the caret's visual position.
      * <br>
@@ -1973,13 +1974,9 @@ public final class EditorCaret implements Caret {
         if (c != null) {
             boolean forceUpdate = c.getClientProperty("editorcaret.updateRetainsVisibleOnce") != null;
             boolean log = LOG.isLoggable(Level.FINE);
-            Component parent = c.getParent();
             Rectangle editorRect;
-            if (parent instanceof JLayeredPane) {
-                parent = parent.getParent();
-            }
-            if (parent instanceof JViewport) {
-                final JViewport viewport = (JViewport) parent;
+            final JViewport viewport = getViewport();
+            if (viewport != null) {
                 editorRect = viewport.getViewRect();
             } else {
                 Dimension size = c.getSize();
@@ -1989,7 +1986,7 @@ public final class EditorCaret implements Caret {
                 Rectangle cbounds = getLastCaretItem().getCaretBounds();
                 if (cbounds != null) {
                     // save relative position of the main caret
-                    maybeSaveCaretOffset(c, cbounds);
+                    maybeSaveCaretOffset(cbounds);
                 }
             }
             if (!calledFromPaint && !c.isValid() /* && maintainVisible == null */) {
@@ -2031,24 +2028,18 @@ public final class EditorCaret implements Caret {
                             // Only scroll the view for the LAST caret to be visible
                             // For null old bounds (likely at begining of component displayment) ensure that a possible
                             // horizontal scrollbar would not hide the caret so enlarge the scroll bounds by hscrollbar height.
-                            if (oldCaretBounds == null) {
-                                Component viewport = c.getParent();
-                                if (viewport instanceof JLayeredPane) {
-                                    viewport = viewport.getParent();
-                                }
-                                if (viewport instanceof JViewport) {
-                                    Component scrollPane = viewport.getParent();
-                                    if (scrollPane instanceof JScrollPane) {
-                                        JScrollBar hScrollBar = ((JScrollPane) scrollPane).getHorizontalScrollBar();
-                                        if (hScrollBar != null) {
-                                            int hScrollBarHeight = hScrollBar.getPreferredSize().height;
-                                            Dimension extentSize = ((JViewport) viewport).getExtentSize();
-                                            // If the extent size is high enough then extend
-                                            // the scroll region by extra vertical space
-                                            if (extentSize.height >= caretBounds.height + hScrollBarHeight) {
-                                                scrollBounds = new Rectangle(scrollBounds); // Clone
-                                                scrollBounds.height += hScrollBarHeight;
-                                            }
+                            if (oldCaretBounds == null && viewport != null) {
+                                Component scrollPane = viewport.getParent();
+                                if (scrollPane instanceof JScrollPane) {
+                                    JScrollBar hScrollBar = ((JScrollPane) scrollPane).getHorizontalScrollBar();
+                                    if (hScrollBar != null) {
+                                        int hScrollBarHeight = hScrollBar.getPreferredSize().height;
+                                        Dimension extentSize = ((JViewport) viewport).getExtentSize();
+                                        // If the extent size is high enough then extend
+                                        // the scroll region by extra vertical space
+                                        if (extentSize.height >= caretBounds.height + hScrollBarHeight) {
+                                            scrollBounds = new Rectangle(scrollBounds); // Clone
+                                            scrollBounds.height += hScrollBarHeight;
                                         }
                                     }
                                 }
@@ -2586,12 +2577,9 @@ public final class EditorCaret implements Caret {
                 // and if it's fired the caret's bounds will be checked whether
                 // they intersect with the horizontal scrollbar
                 // and if so the view will be scrolled.
-                Container parent = component.getParent();
-                if(parent instanceof JLayeredPane) {
-                    parent = parent.getParent();
-                }
-                if (parent instanceof JViewport) {
-                    parent = parent.getParent(); // parent of viewport
+                final JViewport viewport = getViewport();
+                if (viewport != null) {
+                    Component parent = viewport.getParent();
                     if (parent instanceof JScrollPane) {
                         JScrollPane scrollPane = (JScrollPane) parent;
                         JScrollBar hScrollBar = scrollPane.getHorizontalScrollBar();
