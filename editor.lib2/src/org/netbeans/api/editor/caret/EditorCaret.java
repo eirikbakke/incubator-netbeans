@@ -1949,6 +1949,18 @@ public final class EditorCaret implements Caret {
      */
     private int lastCaretVisualOffset = -1;
 
+    private boolean isWrapping() {
+        // See o.n.modules.editor.lib2.view.DocumentViewOp.updateLineWrapType().
+        Object lwt = null;
+        if (component != null) {
+            lwt = component.getClientProperty(SimpleValueNames.TEXT_LINE_WRAP);
+            if (lwt == null) {
+                lwt = component.getDocument().getProperty(SimpleValueNames.TEXT_LINE_WRAP);
+            }
+        }
+        return (lwt instanceof String) && !"none".equals(lwt);
+    }
+
     private JViewport getViewport() {
         Component parent = component.getParent();
         if (parent instanceof JLayeredPane) {
@@ -2025,6 +2037,25 @@ public final class EditorCaret implements Caret {
                         }
                         if (caretBounds != null) {
                             Rectangle scrollBounds = new Rectangle(caretBounds); // Must possibly be cloned upon change
+                            if (viewport != null && isWrapping()) {
+                                /* When wrapping, only scroll to the right if the caret is
+                                decisively outside the wrapped area (e.g. on a very long unbreakable
+                                word). Otherwise, always scroll back to the left. When typing such
+                                that the caret goes from the end of one wrap line to the next, the
+                                new caret position might be one or more characters away from the
+                                first character on the wrap line, so a regular
+                                scroll-to-make-the-caret-visible would not do the job. */
+                                if (scrollBounds.x <= viewport.getExtentSize().width) {
+                                    scrollBounds.x = 0;
+                                    scrollBounds.width = 1;
+                                    /* Avoid generating a drag-select as a result of the viewport
+                                    being automatically scrolled back to x=0 as a result of the user
+                                    clicking once to move the caret. */
+                                    if (viewport.getViewPosition().x > 0 && getDot() == getMark()) {
+                                        mouseState = MouseState.DEFAULT;
+                                    }
+                                }
+                            }
                             // Only scroll the view for the LAST caret to be visible
                             // For null old bounds (likely at begining of component displayment) ensure that a possible
                             // horizontal scrollbar would not hide the caret so enlarge the scroll bounds by hscrollbar height.
