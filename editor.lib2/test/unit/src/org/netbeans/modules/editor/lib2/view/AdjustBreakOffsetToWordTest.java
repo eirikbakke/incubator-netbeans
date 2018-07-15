@@ -50,11 +50,11 @@ public class AdjustBreakOffsetToWordTest {
     @Test
     public void testLongWord() {
         // Forward-skipping is necessary.
-        testOne("|this is a test", "this |is a test");
-        testOne("t|his is a test", "this |is a test");
-        testOne("th|is is a test", "this |is a test");
-        testOne("thi|s is a test", "this |is a test");
-        testOne("this| is a test", "this |is a test");
+        testOne("|this is a test", "this| is a test", "this |is a test");
+        testOne("t|his is a test", "this| is a test", "this |is a test");
+        testOne("th|is is a test", "this| is a test", "this |is a test");
+        testOne("thi|s is a test", "this| is a test", "this |is a test");
+        testOne("this| is a test", "this| is a test", "this |is a test");
     }
 
     @Test
@@ -110,23 +110,23 @@ public class AdjustBreakOffsetToWordTest {
         testOne("|", "|");
         testOne("| ", " |");
         testOne(" |", " |");
-        testOne("|  ", "  |");
-        testOne(" | ", "  |");
+        testOne("|  ", " | ");
+        testOne(" | ", " | ", "  |");
         testOne("  |", "  |");
-        testOne("|   ", "   |");
-        testOne(" |  ", "   |");
-        testOne("  | ", "   |");
+        testOne("|   ", " |  ");
+        testOne(" |  ", " |  ", "  | ");
+        testOne("  | ", "  | ",  "   |");
         testOne("   |", "   |");
     }
 
     @Test
     public void testTrailingNewline() {
         // A newline character should just be treated like any other whitespace here.
-        testOne("|this is a test\n", "this |is a test\n");
-        testOne("t|his is a test\n", "this |is a test\n");
-        testOne("th|is is a test\n", "this |is a test\n");
-        testOne("thi|s is a test\n", "this |is a test\n");
-        testOne("this| is a test\n", "this |is a test\n");
+        testOne("|this is a test\n", "this| is a test\n", "this |is a test\n");
+        testOne("t|his is a test\n", "this| is a test\n", "this |is a test\n");
+        testOne("th|is is a test\n", "this| is a test\n", "this |is a test\n");
+        testOne("thi|s is a test\n", "this| is a test\n", "this |is a test\n");
+        testOne("this| is a test\n", "this| is a test\n", "this |is a test\n");
         testOne("this |is a test\n", "this |is a test\n");
         testOne("this i|s a test\n", "this |is a test\n");
         testOne("this is| a test\n", "this |is a test\n", "this is |a test\n");
@@ -143,11 +143,11 @@ public class AdjustBreakOffsetToWordTest {
     @Test
     public void testSpacesBetween() {
         // Multiple whitespace characters between first and second word.
-        testOne("th|is   is a test", "this   |is a test");
-        testOne("thi|s   is a test", "this   |is a test");
-        testOne("this|   is a test", "this   |is a test");
-        testOne("this |  is a test", "this   |is a test");
-        testOne("this  | is a test", "this   |is a test");
+        testOne("th|is   is a test", "this|   is a test", "this |  is a test");
+        testOne("thi|s   is a test", "this|   is a test", "this |  is a test");
+        testOne("this|   is a test", "this|   is a test", "this |  is a test");
+        testOne("this |  is a test", "this |  is a test", "this  | is a test");
+        testOne("this  | is a test", "this  | is a test", "this   |is a test");
         testOne("this   |is a test", "this   |is a test");
         testOne("this   i|s a test", "this   |is a test");
         testOne("this   is| a test", "this   |is a test", "this   is |a test");
@@ -155,8 +155,8 @@ public class AdjustBreakOffsetToWordTest {
         // Multiple whitespace characters between words not including the first word.
         testOne("this |is   aaaa test", "this |is   aaaa test");
         testOne("this i|s   aaaa test", "this |is   aaaa test");
-        testOne("this is|   aaaa test", "this |is   aaaa test", "this is   |aaaa test");
-        testOne("this is |  aaaa test", "this |is   aaaa test", "this is   |aaaa test");
+        testOne("this is|   aaaa test", "this |is   aaaa test", "this is |  aaaa test");
+        testOne("this is |  aaaa test", "this |is   aaaa test", "this is  | aaaa test");
         testOne("this is  | aaaa test", "this |is   aaaa test", "this is   |aaaa test");
         testOne("this is   |aaaa test", "this is   |aaaa test");
         testOne("this is   a|aaa test", "this is   |aaaa test");
@@ -173,23 +173,23 @@ public class AdjustBreakOffsetToWordTest {
         testOne("this is a test |", "this is a test |");
         // Two trailing whitespace characters.
         testOne("this is a tes|t  ", "this is a |test  ", "this is a |test  ");
-        testOne("this is a test|  ", "this is a |test  ", "this is a test  |");
+        testOne("this is a test|  ", "this is a |test  ", "this is a test | ");
         testOne("this is a test | ", "this is a |test  ", "this is a test  |");
         testOne("this is a test  |", "this is a test  |", "this is a test  |");
         // Long line with one trailing whitespace character.
-        testOne("|testtest ", "testtest |");
-        testOne("t|esttest ", "testtest |");
-        testOne("testte|st ", "testtest |");
-        testOne("testtes|t ", "testtest |");
-        testOne("testtest| ", "testtest |");
-        testOne("testtest |", "testtest |");
+        testOne("|testtest ", "testtest| ", "testtest |");
+        testOne("t|esttest ", "testtest| ", "testtest |");
+        testOne("testte|st ", "testtest| ", "testtest |");
+        testOne("testtes|t ", "testtest| ", "testtest |");
+        testOne("testtest| ", "testtest| ", "testtest |");
+        testOne("testtest |", "testtest |", "testtest |");
         // Long line with two trailing whitespace characters.
-        testOne("|testtest  ", "testtest  |");
-        testOne("t|esttest  ", "testtest  |");
-        testOne("testte|st  ", "testtest  |");
-        testOne("testtes|t  ", "testtest  |");
-        testOne("testtest|  ", "testtest  |");
-        testOne("testtest | ", "testtest  |");
+        testOne("|testtest  ", "testtest|  ", "testtest | ");
+        testOne("t|esttest  ", "testtest|  ", "testtest | ");
+        testOne("testte|st  ", "testtest|  ", "testtest | ");
+        testOne("testtes|t  ", "testtest|  ", "testtest | ");
+        testOne("testtest|  ", "testtest|  ", "testtest | ");
+        testOne("testtest | ", "testtest | ", "testtest  |");
         testOne("testtest  |", "testtest  |");
     }
 
@@ -205,8 +205,8 @@ public class AdjustBreakOffsetToWordTest {
         testOne(" this |is a test", " this |is a test");
         testOne(" this i|s a test", " this |is a test");
         // Two leading spaces
-        testOne("|  this is a test", "  |this is a test");
-        testOne(" | this is a test", "  |this is a test");
+        testOne("|  this is a test", " | this is a test");
+        testOne(" | this is a test", " | this is a test", "  |this is a test");
         testOne("  |this is a test", "  |this is a test");
         testOne("  t|his is a test", "  |this is a test");
         testOne("  th|is is a test", "  |this is a test");

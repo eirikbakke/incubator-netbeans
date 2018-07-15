@@ -762,16 +762,23 @@ public class HighlightsViewUtils {
      * that the character with index (X-1) in {@code paragraph} will be the last one on the physical
      * line.
      *
-     * <p>The current implementation avoids creating lines with leading whitespace, allows lines to
-     * be broken after hyphens, and, if {@code allowWhitespaceBeyondEnd} is true, allows whitespace
-     * characters to extend beyond the preferred break width to make use of all available horizontal
-     * space. Very long unbreakable words, and their trailing whitespace, may extend beyond the
-     * preferred break offset regardless of the setting of {@code allowWhitespaceBeyondEnd}.
+     * <p>The current implementation avoids creating lines with leading whitespace (when words are
+     * separated by at most one whitespace character), allows lines to be broken after hyphens, and,
+     * if {@code allowWhitespaceBeyondEnd} is true, allows one whitespace character to extend beyond
+     * the preferred break width to make use of all available horizontal space. Very long
+     * unbreakable words may extend beyond the preferred break offset regardless of the setting of
+     * {@code allowWhitespaceBeyondEnd}.
+     *
+     * <p>It was previously considered to allow an arbitrary number of whitespace characters to
+     * trail off the end of each wrap line, rather than just one. In the end, it turned out to be
+     * better to limit this to just one character, as this conveniently avoids the need to ever
+     * position the visual text caret outside the word-wrapped editor viewport (except in cases of
+     * very long unbreakable words).
      *
      * @param paragraph a long line of text to be broken, i.e. a paragraph, or the remainder of a
      *        paragraph if some of its initial lines of wrapped text have already been laid out
      * @param preferredMaximumBreakOffset the preferred maximum break offset
-     * @param allowWhitespaceBeyondEnd if true, allow whitespace characters to extend beyond
+     * @param allowWhitespaceBeyondEnd if true, allow one whitespace character to extend beyond
      *        {@code preferredMaximumBreakOffset} even when this could be avoided by choosing a
      *        smaller break offset
      */
@@ -791,29 +798,42 @@ public class HighlightsViewUtils {
         bi.setText(new CharSequenceCharacterIterator(paragraph));
 
         int ret;
-        if (preferredMaximumBreakOffset == 0 ||
+        if (preferredMaximumBreakOffset == 0) {
+            // Skip forward to next boundary.
+            ret = 0;
+        } else if (
             allowWhitespaceBeyondEnd && preferredMaximumBreakOffset < paragraph.length() &&
             Character.isWhitespace(paragraph.charAt(preferredMaximumBreakOffset)))
         {
-          // Skip forward to next boundary.
-          ret = 0;
+            // Allow one whitespace character to extend beyond the preferred break offset.
+            return preferredMaximumBreakOffset + 1;
         } else {
-          // Skip backwards to previous boundary.
-          ret = bi.isBoundary(preferredMaximumBreakOffset)
-              ? preferredMaximumBreakOffset
-              : bi.preceding(preferredMaximumBreakOffset);
-          if (ret == BreakIterator.DONE)
-              ret = preferredMaximumBreakOffset;
+            // Skip backwards to previous boundary.
+            ret = bi.isBoundary(preferredMaximumBreakOffset)
+                ? preferredMaximumBreakOffset
+                : bi.preceding(preferredMaximumBreakOffset);
+            if (ret == BreakIterator.DONE)
+                ret = preferredMaximumBreakOffset;
         }
         if (ret == 0) {
-          /* Skip forward to next boundary (for words longer than the preferred break offset, or to
-          consume additional whitespace following a word-aligned break point within the preferred
-          break offset). */
-          ret = preferredMaximumBreakOffset > 0 && bi.isBoundary(preferredMaximumBreakOffset)
-              ? preferredMaximumBreakOffset
-              : bi.following(preferredMaximumBreakOffset);
-          if (ret == BreakIterator.DONE)
-              ret = preferredMaximumBreakOffset;
+            // Skip forward to next boundary (for words longer than the preferred break offset).
+            ret = preferredMaximumBreakOffset > 0 && bi.isBoundary(preferredMaximumBreakOffset)
+                ? preferredMaximumBreakOffset
+                : bi.following(preferredMaximumBreakOffset);
+            if (ret == BreakIterator.DONE)
+                ret = preferredMaximumBreakOffset;
+            /* The line-based break iterator will include whitespace trailing a word as well. Strip
+            this off so we can apply our own policy here. */
+            int retBeforeTrim = ret;
+            while (ret > preferredMaximumBreakOffset &&
+                Character.isWhitespace(paragraph.charAt(ret - 1)))
+            {
+                ret--;
+            }
+            /* If allowWhitespaceBeyondEnd is true, allow at most one whitespace character to trail
+            the word at the end. */
+            if ((allowWhitespaceBeyondEnd || ret == 0) && retBeforeTrim > ret)
+                ret++;
         }
         return ret;
     }
