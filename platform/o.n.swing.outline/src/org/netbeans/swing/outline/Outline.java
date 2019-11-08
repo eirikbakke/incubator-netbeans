@@ -33,7 +33,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EventObject;
@@ -45,7 +44,6 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ActionMap;
 import javax.swing.Icon;
-import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JScrollBar;
@@ -923,7 +921,8 @@ public class Outline extends ETable {
             Object value = getValueAt(row, column);
             if (value != null && crender.isCheckable(value) && crender.isCheckEnabled(value)) {
                 b.checkWidth = ocr.getTheCheckBoxWidth();
-                b.checkBox = ocr.setUpCheckBox(crender, value, ocr.createCheckBox());
+                b.checkBoxPainter = ocr.setUpCheckBoxPainter(crender, value,
+                        DefaultOutlineCellRenderer.createCheckBox());
             }
         }
         b.icon = rdp.getIcon(o);
@@ -1126,7 +1125,7 @@ public class Outline extends ETable {
         private int nestingDepth;
         private final int ICON_TEXT_GAP = new JLabel().getIconTextGap();
         private int checkWidth;
-        private JCheckBox checkBox;
+        private CheckBoxPainter checkBoxPainter;
         
         @Override
         public Insets getBorderInsets(Component c) {
@@ -1162,9 +1161,9 @@ public class Outline extends ETable {
             }
             iconX += DefaultOutlineCellRenderer.getExpansionHandleWidth() + 1;
             
-            if (null != checkBox) {
+            if (null != checkBoxPainter) {
                 java.awt.Graphics chbg = g.create(iconX, y, checkWidth, height);
-                checkBox.paint(chbg);
+                checkBoxPainter.paint(chbg);
                 chbg.dispose();
             }
             iconX += checkWidth;
