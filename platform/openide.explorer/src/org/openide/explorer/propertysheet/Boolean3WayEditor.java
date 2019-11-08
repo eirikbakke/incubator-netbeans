@@ -50,7 +50,8 @@ final class Boolean3WayEditor implements ExPropertyEditor, InplaceEditor.Factory
 
     /** Utility field holding list of PropertyChangeListeners. */
     private transient List<PropertyChangeListener> propertyChangeListenerList;
-    private Boolean3Inplace renderer = null;
+    private CheckBoxPainter renderer = null;
+    private PropertyEnv env;
 
     public Boolean3WayEditor() {
     }
@@ -93,14 +94,11 @@ final class Boolean3WayEditor implements ExPropertyEditor, InplaceEditor.Factory
 
     public void paintValue(Graphics gfx, Rectangle box) {
         if (renderer == null) {
-            renderer = new Boolean3Inplace();
+            renderer = new CheckBoxPainter(new JCheckBox());
         }
-
+        renderer.setState(env == null || env.isEditable(), v);
         renderer.setSize(box.width, box.height);
-        renderer.doLayout();
-
         Graphics g = gfx.create(box.x, box.y, box.width, box.height);
-        renderer.setOpaque(false);
         renderer.paint(g);
         g.dispose();
     }
@@ -126,6 +124,7 @@ final class Boolean3WayEditor implements ExPropertyEditor, InplaceEditor.Factory
 
     public void attachEnv(PropertyEnv env) {
         env.registerInplaceEditorFactory(this);
+        this.env = env;
     }
 
     /** Registers PropertyChangeListener to receive events.

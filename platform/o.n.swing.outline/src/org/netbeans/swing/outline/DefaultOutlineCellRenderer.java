@@ -23,7 +23,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Insets;
-import java.awt.Rectangle;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationTargetException;
@@ -60,7 +59,7 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
     private int labelTextGap = 0;
     private final JCheckBox theCheckBox;
     private final CellRendererPane fakeCellRendererPane;
-    private JCheckBox checkBox;
+    private CheckBoxPainter checkBoxPainter;
     private Reference<RenderDataProvider> lastRendererRef = new WeakReference<RenderDataProvider>(null); // Used by lazy tooltip
     private Reference<Object> lastRenderedValueRef = new WeakReference<Object>(null);                    // Used by lazy tooltip
     private static final Border expansionBorder = new ExpansionHandleBorder();
@@ -86,11 +85,9 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
         fakeCellRendererPane.add(theCheckBox);
     }
     
-    final JCheckBox createCheckBox() {
+    final static JCheckBox createCheckBox() {
         JCheckBox cb = new JCheckBox();
         cb.setSize(cb.getPreferredSize());
-        cb.setBorderPainted(false);
-        cb.setOpaque(false);
         return cb;
     }
     
@@ -175,8 +172,8 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
         showHandle = val;
     }
 
-    private void setCheckBox(JCheckBox checkBox) {
-        this.checkBox = checkBox;
+    private void setCheckBoxPainter(CheckBoxPainter checkBoxPainter) {
+        this.checkBoxPainter = checkBoxPainter;
     }
     
     private boolean isLeaf () {
@@ -207,20 +204,14 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
         return nestingDepth;
     }
 
-    private JCheckBox getCheckBox() {
-        return checkBox;
+    private CheckBoxPainter getCheckBoxPainter() {
+        return checkBoxPainter;
     }
     
-    final JCheckBox setUpCheckBox(CheckRenderDataProvider crendata, Object value, JCheckBox cb) {
-        Boolean chSelected = crendata.isSelected(value);
-        cb.setEnabled(true);
-        cb.setSelected(!Boolean.FALSE.equals(chSelected));
-        // Third state is "selected armed" to be consistent with org.openide.explorer.propertysheet.ButtonModel3Way
-        cb.getModel().setArmed(chSelected == null);
-        cb.getModel().setPressed(chSelected == null);
-        cb.setEnabled(crendata.isCheckEnabled(value));
-        cb.setBackground(getBackground());
-        return cb;
+    final CheckBoxPainter setUpCheckBoxPainter(CheckRenderDataProvider crendata, Object value, JCheckBox cb) {
+        CheckBoxPainter ret = new CheckBoxPainter(cb);
+        ret.setState(crendata.isCheckEnabled(value), crendata.isSelected(value));
+        return ret;
     }
 
     int getTheCheckBoxWidth() {
@@ -313,16 +304,16 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
                 }
                 icon = rendata.getIcon(value);
 
-                JCheckBox cb = null;
+                CheckBoxPainter cp = null;
                 if (rendata instanceof CheckRenderDataProvider) {
                     CheckRenderDataProvider crendata = (CheckRenderDataProvider) rendata;
                     if (crendata.isCheckable(value)) {
-                        cb = setUpCheckBox(crendata, value, theCheckBox);
+                        cp = setUpCheckBoxPainter(crendata, value, theCheckBox);
                     }
                 }
-                setCheckBox(cb);
+                setCheckBoxPainter(cp);
             } else {
-                setCheckBox(null);
+                setCheckBoxPainter(null);
             }
             if (icon == null) {
                 if (!isleaf) {
@@ -344,7 +335,7 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
                 setLabelTextGap(getIconTextGap());
             }
         } else { // ! tbl.isTreeColumnIndex(column)
-            setCheckBox(null);
+            setCheckBoxPainter(null);
             if (swingRendering) {
                 setIcon(null);
             } else {
@@ -422,8 +413,8 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
                 insets.right = 1;
                 insets.bottom = 1;
             }
-            if (ren.getCheckBox() != null) {
-                insets.left += ren.getCheckBox().getSize().width;
+            if (ren.getCheckBoxPainter() != null) {
+                insets.left += ren.getCheckBoxPainter().getSize().width;
             }
             return insets;
         }
@@ -460,13 +451,13 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
                     icon.paintIcon(c, g, iconX, iconY);
                 }
             }
-            JCheckBox chBox = ren.getCheckBox();
-            if (chBox != null) {
+            CheckBoxPainter chBoxPainter = ren.getCheckBoxPainter();
+            if (chBoxPainter != null) {
                 int chBoxX = getExpansionHandleWidth() + ren.getNestingDepth() * getNestingWidth();
-                Rectangle bounds = chBox.getBounds();
+                Dimension size = chBoxPainter.getSize();
                 int chBoxY;
-                if (bounds.getHeight() < height) {
-                    chBoxY = (height / 2) - (((int) bounds.getHeight()) / 2);
+                if (size.getHeight() < height) {
+                    chBoxY = (height / 2) - (((int) size.getHeight()) / 2);
                 } else {
                     if (isNimbus) {
                         chBoxY = 1;
@@ -474,9 +465,9 @@ public class DefaultOutlineCellRenderer extends DefaultTableCellRenderer {
                         chBoxY = 0;
                     }
                 }
-                Dimension chDim = chBox.getSize();
+                Dimension chDim = chBoxPainter.getSize();
                 java.awt.Graphics gch = g.create(chBoxX, chBoxY, chDim.width, chDim.height);
-                chBox.paint(gch);
+                chBoxPainter.paint(gch);
             }
         }
     }
