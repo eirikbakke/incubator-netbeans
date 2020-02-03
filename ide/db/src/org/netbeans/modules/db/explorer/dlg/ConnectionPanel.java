@@ -46,13 +46,15 @@ import org.openide.util.NbBundle;
 public class ConnectionPanel implements AddConnectionWizard.Panel, WizardDescriptor.AsynchronousValidatingPanel<AddConnectionWizard>, WizardDescriptor.FinishablePanel<AddConnectionWizard> {
 
     private final int stepIndex;
+    private final boolean noSchema;
     private DatabaseConnection databaseConnection;
     private JDBCDriver drv;
     private JDBCDriver oldDriver;
     private static HelpCtx CONNECTION_PANEL_HELPCTX = new HelpCtx(ConnectionPanel.class);
 
-    public ConnectionPanel(int stepIndex) {
+    public ConnectionPanel(int stepIndex, boolean noSchema) {
         this.stepIndex = stepIndex;
+        this.noSchema = noSchema;
     }
     /**
      * The visual component that displays this panel. If you need to access the
@@ -146,7 +148,9 @@ public class ConnectionPanel implements AddConnectionWizard.Panel, WizardDescrip
     public void storeSettings(AddConnectionWizard settings) {
         // store values from from into connection
         component.setConnectionInfo();
-        pw.setCurrentSchema(databaseConnection.getUser().toUpperCase());
+        if (!noSchema) {
+            pw.setCurrentSchema(databaseConnection.getUser().toUpperCase());
+        }
         pw.setDatabaseConnection(databaseConnection);
     }
     private String errorMessage;
@@ -209,6 +213,10 @@ public class ConnectionPanel implements AddConnectionWizard.Panel, WizardDescrip
                         if (dbMetaData.supportsSchemasInTableDefinitions()) {
                             ResultSet rs = dbMetaData.getSchemas();
                             if (rs != null) {
+                                /* In the noSchema=true case, there is technically no need to retrieve the list of schemas,
+                                since the schema selection wizard page will never be shown. Nevertheless, retrieving the
+                                schema list here is a good way to validate the collection, so keep this code enabled as it
+                                always was. */
                                 while (rs.next()) {
                                     if (schemas == null) {
                                         schemas = new ArrayList<String>();
