@@ -22,7 +22,6 @@ import java.awt.Dialog;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -145,13 +144,16 @@ public class AddConnectionWizard extends ConnectionDialogMediator implements Wiz
                 stepIndex++;
             }
 
-            toPanels.add(new ConnectionPanel(stepIndex));
+            final boolean noschema = "true".equalsIgnoreCase(System.getProperty("db.connectwizard.noschema"));
+            toPanels.add(new ConnectionPanel(stepIndex, noschema));
             toSteps.add(NbBundle.getMessage(AddConnectionWizard.class, "ConnectionPanel.Name")); // NOI18N
             stepIndex++;
 
-            toPanels.add(new ChoosingSchemaPanel(stepIndex));
-            toSteps.add(NbBundle.getMessage(AddConnectionWizard.class, "ChoosingSchemaPanel.Name")); // NOI18N
-            stepIndex++;
+            if (!noschema) {
+                toPanels.add(new ChoosingSchemaPanel(stepIndex));
+                toSteps.add(NbBundle.getMessage(AddConnectionWizard.class, "ChoosingSchemaPanel.Name")); // NOI18N
+                stepIndex++;
+            }
 
             toPanels.add(new ChoosingConnectionNamePanel(stepIndex));
             toSteps.add(NbBundle.getMessage(AddConnectionWizard.class, "ChooseConnectionNamePanel.Name")); // NOI18N
