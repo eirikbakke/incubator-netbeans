@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.Set;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import org.netbeans.modules.db.explorer.DatabaseConnection;
 import org.openide.util.HelpCtx;
 
 public class ChoosingConnectionNamePanel implements AddConnectionWizard.Panel {
@@ -44,6 +45,29 @@ public class ChoosingConnectionNamePanel implements AddConnectionWizard.Panel {
         this.stepIndex = stepIndex;
     }
 
+    private String getFullProposedName() {
+      DatabaseConnection conn = pw.getDatabaseConnection();
+      String connectionPart = pw.getProposedConnectionDisplayName();
+      if (connectionPart == null) {
+          return conn.getDisplayName();
+      }
+      String user = conn.getUser().trim();
+      String schema = pw.getCurrentSchema();
+      if (schema == null) {
+          schema = "";
+      }
+      schema = schema.trim();
+      if (user.isEmpty() && schema.isEmpty()) {
+        return connectionPart;
+      } else if (user.isEmpty()) {
+        return connectionPart + " (" + schema + ")";
+      } else if (schema.isEmpty() || user.equalsIgnoreCase(schema)) {
+        return connectionPart + " (" + user + ")";
+      } else {
+        return connectionPart + " (" + user + " on " + schema + ")";
+      }
+    }
+
     // Get the visual component for the panel. In this template, the component
     // is kept separate. This can be more efficient: if the wizard is created
     // but never displayed, or not all panels are displayed, it is better to
@@ -55,7 +79,7 @@ public class ChoosingConnectionNamePanel implements AddConnectionWizard.Panel {
                 return null;
             }
             assert pw != null : "ChoosingConnectionNamePanel must be initialized.";
-            component = new ConnectionNamePanel(pw, pw.getDatabaseConnection().getDisplayName());
+            component = new ConnectionNamePanel(pw, getFullProposedName());
             component.setName(pw.getSteps()[stepIndex]);
             component.addPropertyChangeListener(ConnectionNamePanel.PROP_CONNECTION_NAME,
                     new PropertyChangeListener() {
@@ -112,7 +136,7 @@ public class ChoosingConnectionNamePanel implements AddConnectionWizard.Panel {
     public void readSettings(AddConnectionWizard settings) {
         this.pw = settings;
         blockEventListener = true;
-        ((ConnectionNamePanel) getComponent()).setConnectionName(pw.getDatabaseConnection().getDisplayName());
+        ((ConnectionNamePanel) getComponent()).setConnectionName(getFullProposedName());
         blockEventListener = false;
     }
 
