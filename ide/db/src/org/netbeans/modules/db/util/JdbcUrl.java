@@ -152,13 +152,24 @@ public class JdbcUrl extends HashMap<String, String> {
         if (isEmpty(getType())) {
             nameAndType = displayName;
         } else {
-            nameAndType = displayName + " (" + getType() + ")";         //NOI18N
+            /* Use a slash here as a separator instead of parentheses, since some of the types
+            include parentheses themselves. E.g. "Oracle Thin / Service ID (SID)". */
+            nameAndType = displayName + " / " + getType();         //NOI18N
         }
         if (driver != null && driver.getDisplayName() != null
-                && !driver.getDisplayName().equals(displayName)) {
-            return NbBundle.getMessage(DriverListUtil.class,
-                    "JDBC_URL_DRIVER_NAME", //NOI18N
-                    nameAndType, driver.getDisplayName());
+                && !driver.getDisplayName().equals(displayName))
+        {
+            /* If the driver name has been customized such that
+            JDBC_URL_DRIVER_NAME format would yield, for instance,
+            "Oracle Thin / Service ID (SID) on Oracle", then we can just drop
+            the "on Oracle" part. */
+            if (nameAndType.startsWith(driver.getDisplayName())) {
+                return nameAndType;
+            } else {
+                return NbBundle.getMessage(DriverListUtil.class,
+                        "JDBC_URL_DRIVER_NAME", //NOI18N
+                        nameAndType, driver.getDisplayName());
+            }
         } else {
             return nameAndType;
         }
