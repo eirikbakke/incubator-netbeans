@@ -48,7 +48,6 @@ import org.netbeans.api.progress.ProgressHandle;
 import org.netbeans.api.progress.ProgressHandleFactory;
 import org.netbeans.modules.db.explorer.node.DriverNode;
 import org.netbeans.modules.db.util.DriverListUtil;
-import org.netbeans.modules.db.util.JdbcUrl;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
@@ -659,10 +658,27 @@ public final class AddDriverDialog extends javax.swing.JPanel {
     /** Updates state of UI controls. */
     private void updateState() {
         boolean enable = getDriverURLs().length > 0;
+        boolean protect = false;
+        if (wp != null && drv != null && drv.getURLs().length > 0 &&
+            "true".equalsIgnoreCase(System.getProperty("db.connectwizard.protectbundledjars")))
+        {
+            /* Disable adding/removing of JAR files for drivers that have these bundled as part of
+            the application. When there are user-added JARs present, or no JARs at all, the JAR list
+            can still be edited. */
+            protect = true;
+            for (URL url : drv.getURLs()) {
+                /* Bundled JAR files use the "nbinst" protocol, e.g.
+                "nbinst://org.netbeans.modules.db.drivers/modules/ext/postgresql-42.2.5.jar" */
+                if (!url.getProtocol().equals("nbinst")) {
+                    protect = false;
+                    break;
+                }
+            }
+        }
         // update Browse button state
-        browseButton.setEnabled(drv != null || ! (wp != null));
+        browseButton.setEnabled(!protect && (drv != null || wp == null));
         // update Remove button state
-        removeButton.setEnabled(enable && drvList.getSelectedIndices().length > 0);
+        removeButton.setEnabled(!protect && (enable && drvList.getSelectedIndices().length > 0));
         // update Find button state
         findButton.setEnabled(enable && progressHandle == null && drvList.getModel().getSize() > 0);
         // drvList

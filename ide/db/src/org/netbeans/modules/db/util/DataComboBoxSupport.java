@@ -88,6 +88,9 @@ public final class DataComboBoxSupport {
      */
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
     public static void connect(JComboBox comboBox, DataComboBoxModel dataModel, boolean allowAdding) {
+        if ("true".equalsIgnoreCase(System.getProperty("db.connectwizard.nonewdrivers"))) {
+            allowAdding = false;
+        }
         new DataComboBoxSupport(comboBox, dataModel, allowAdding);
     }
 
