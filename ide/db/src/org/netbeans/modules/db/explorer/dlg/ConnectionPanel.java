@@ -152,6 +152,8 @@ public class ConnectionPanel implements AddConnectionWizard.Panel, WizardDescrip
             pw.setCurrentSchema(databaseConnection.getUser().toUpperCase());
         }
         pw.setDatabaseConnection(databaseConnection);
+        pw.setProposedConnectionDisplayName(
+                component == null ? null : component.getProposedConnectionDisplayName());
     }
     private String errorMessage;
 

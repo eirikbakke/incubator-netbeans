@@ -192,19 +192,24 @@ public class DriverListUtilTest extends TestCase {
         JdbcUrl url = checkUrl(getDriverName("DRIVERNAME_MySQL"), null, "com.mysql.cj.jdbc.Driver", 
                 "jdbc:mysql://[<HOST>[:<PORT>]][/<DB>][?<ADDITIONAL>]",
                 STD_SUPPORTED_PROPS, requiredProps);
+        assertEquals(Integer.valueOf(3306), url.getDefaultPort());
         
         HashMap<String, String> propValues = buildPropValues(STD_SUPPORTED_PROPS);
         
         testUrlString(url, propValues, "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB + "?" + ADDITIONAL);
+        testProposedConnectionDisplayName(url, "MySQL (Connector/J driver) myhost:8888/mydb?foo;bar;baz");
 
         propValues.remove(JdbcUrl.TOKEN_ADDITIONAL);
         testUrlString(url, propValues, "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB);
+        testProposedConnectionDisplayName(url, "MySQL (Connector/J driver) myhost:8888/mydb");
         
         propValues.remove(JdbcUrl.TOKEN_PORT);
         testUrlString(url, propValues, "jdbc:mysql://" + HOST + "/" + DB);
+        testProposedConnectionDisplayName(url, "MySQL (Connector/J driver) myhost/mydb");
         
         propValues.remove(JdbcUrl.TOKEN_HOST);
         testUrlString(url, propValues, "jdbc:mysql:///" + DB); 
+        testProposedConnectionDisplayName(url, "MySQL (Connector/J driver) mydb");
     }
 
     public void testMariaDB() throws Exception {
@@ -362,6 +367,7 @@ public class DriverListUtilTest extends TestCase {
                 "com.microsoft.sqlserver.jdbc.SQLServerDriver", 
                 "jdbc:sqlserver://[<HOST>[\\<INSTANCE>][:<PORT>]][;databaseName=<DB>][;<ADDITIONAL>]", 
                 supportedProps, requiredProps);
+        assertEquals(Integer.valueOf(1433), url.getDefaultPort());
         
         HashMap<String, String> propValues = buildPropValues(supportedProps);        
         testUrlString(url, propValues, "jdbc:sqlserver://" + HOST + "\\" + INSTANCE + ":" + PORT + ";databaseName=" + DB + ";" + ADDITIONAL);
@@ -478,6 +484,7 @@ public class DriverListUtilTest extends TestCase {
         
         JdbcUrl url = checkOracleUrl(otype, "<HOST>:<PORT>:<SID>[?<ADDITIONAL>]", getType("TYPE_SID"),
                 supportedProps, requiredProps);
+        assertEquals(Integer.valueOf(1521), url.getDefaultPort());
 
         String prefix = getOracleUrlPrefix(otype);
         
@@ -511,6 +518,7 @@ public class DriverListUtilTest extends TestCase {
         
         JdbcUrl url = checkOracleUrl(otype, "//<HOST>[:<PORT>][/<SERVICE>][?<ADDITIONAL>]", getType("TYPE_Service"),
                 supportedProps, requiredProps);
+        assertEquals(Integer.valueOf(1521), url.getDefaultPort());
 
         String prefix = getOracleUrlPrefix(otype);
         
@@ -612,24 +620,46 @@ public class DriverListUtilTest extends TestCase {
         JdbcUrl url = checkUrl(getDriverName("DRIVERNAME_PostgreSQL"), null, "org.postgresql.Driver", 
                 "jdbc:postgresql:[//<HOST>[:<PORT>]/]<DB>[?<ADDITIONAL>]",
                 STD_SUPPORTED_PROPS, requiredProps);
+        assertEquals(Integer.valueOf(5432), url.getDefaultPort());
+        url.clear();
+        assertEquals(Integer.valueOf(5432), url.getDefaultPort());
+        url.setUrl("jdbc:postgresql://localhost:5432/postgres");
+        assertEquals(Integer.valueOf(5432), url.getDefaultPort());
+        url.setUrl("jdbc:postgresql://localhost:1234/postgres");
+        assertEquals(Integer.valueOf(5432), url.getDefaultPort());
+        url.clear();
         
         HashMap<String, String> propValues = buildPropValues(STD_SUPPORTED_PROPS);        
         testUrlString(url, propValues, "jdbc:postgresql://" + HOST + ":" + PORT + "/" + DB + "?" + ADDITIONAL);
+        testProposedConnectionDisplayName(url, "PostgreSQL myhost:8888/mydb?foo;bar;baz");
+
+        /* If the default port is used, it should be omitted from the proposed
+        connection display name. */
+        propValues.put(JdbcUrl.TOKEN_PORT, "5432");
+        testUrlString(url, propValues, "jdbc:postgresql://" + HOST + ":" + "5432" + "/" + DB + "?" + ADDITIONAL);
+        assertEquals(Integer.valueOf(5432), url.getDefaultPort());
+        testProposedConnectionDisplayName(url, "PostgreSQL myhost/mydb?foo;bar;baz");
+        propValues.put(JdbcUrl.TOKEN_PORT, PORT);
 
         propValues.remove(JdbcUrl.TOKEN_ADDITIONAL);
         testUrlString(url, propValues, "jdbc:postgresql://" + HOST + ":" + PORT + "/" + DB);
+        testProposedConnectionDisplayName(url, "PostgreSQL myhost:8888/mydb");
         
         propValues.remove(JdbcUrl.TOKEN_PORT);
         testUrlString(url, propValues, "jdbc:postgresql://" + HOST + "/" + DB);
+        testProposedConnectionDisplayName(url, "PostgreSQL myhost/mydb");
         
         propValues.remove(JdbcUrl.TOKEN_HOST);
         testUrlString(url, propValues, "jdbc:postgresql:" + DB);
+        testProposedConnectionDisplayName(url, "PostgreSQL mydb");
         
         propValues.remove(JdbcUrl.TOKEN_DB);
         testMissingParameter(url, propValues);
         
         testBadUrlString(url, "jdbc:postgresql:");
         testBadUrlString(url, "jdbc:postgresql:///" + DB);
+
+        assertEquals(Integer.valueOf(5432), url.getDefaultPort());
     }
     
     private void testUrlString(JdbcUrl url, Map<String, String> props, String urlString) throws Exception {
@@ -643,6 +673,10 @@ public class DriverListUtilTest extends TestCase {
         for (String prop : props.keySet()) {
             assertEquals(props.get(prop), url.get(prop));
         }
+    }
+
+    private void testProposedConnectionDisplayName(JdbcUrl url, String expected) {
+        assertEquals(expected, url.getProposedConnectionDisplayName());
     }
     
     private void testMissingParameter(JdbcUrl url, HashMap<String, String> props) {

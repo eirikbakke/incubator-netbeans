@@ -66,7 +66,7 @@ public class JdbcUrl extends HashMap<String, String> {
     private String name;
     private String displayName;
     private final String className;
-    private String urlTemplate;
+    private final String urlTemplate;
     private final String type;
     private String sampleUser;
     private String samplePassword;
@@ -145,7 +145,7 @@ public class JdbcUrl extends HashMap<String, String> {
     }
 
     /**
-     * Get display name with type and custom driver name, if available.
+     * Get a display name for this URL's driver and, if applicable, connection type.
      */
     public String getDisplayName() {
         String nameAndType;
@@ -174,7 +174,74 @@ public class JdbcUrl extends HashMap<String, String> {
             return nameAndType;
         }
     }
-    
+
+    // Package-visible for testing.
+    /**
+     * @return null if the sample URL does not include a port number
+     */
+    Integer getDefaultPort() {
+        if (sampleUrl == null) {
+            return null;
+        }
+        JdbcUrl clone = new JdbcUrl(name, displayName, className, type, urlTemplate, true);
+        try {
+            clone.setUrl(sampleUrl);
+        } catch (MalformedURLException e) {
+            return null;
+        }
+        String ret = clone.get(TOKEN_PORT);
+        if (ret == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(ret);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get a proposed display name for the overall connection represented by this URL. This
+     * excludes any user name or default schema, since the latter are not part of the JDBC URL.
+     */
+    public String getProposedConnectionDisplayName() {
+        JdbcUrl useJdbcUrl = this;
+        // If the default port is used, omit it from the display name.
+        String port = get(TOKEN_PORT);
+        if (port != null) {
+            Integer defaultPort = getDefaultPort();
+            if (defaultPort != null && Integer.toString(defaultPort).equals(port)) {
+                JdbcUrl clone = new JdbcUrl(name, displayName, className, type, urlTemplate, true);
+                try {
+                    clone.setUrl(getUrl());
+                    useJdbcUrl = clone;
+                    useJdbcUrl.remove(JdbcUrl.TOKEN_PORT);
+                } catch (MalformedURLException e) {
+                    // No action.
+                }
+            }
+        }
+        /* Drop the protocol specifier from the URL and use the display name
+        of the driver instead. */
+        String t = getUrlTemplate();
+        String u = useJdbcUrl.getUrl().trim();
+        int i = 0;
+        for (i = 0; i < t.length() && i < u.length(); i++) {
+            if (Character.toLowerCase(t.charAt(i)) != Character.toLowerCase(u.charAt(i))) {
+                break;
+            }
+        }
+        u = u.substring(i);
+        while (u.startsWith("/")) {
+            u = u.substring(1);
+        }
+        String useDisplayName = (driver == null) ? null : driver.getDisplayName();
+        if (useDisplayName == null) {
+            useDisplayName = displayName;
+        }
+        return useDisplayName.trim() + " " + u;
+    }
+
     public boolean supportsToken(String token) {
         return supportedTokens.contains(token);
     }

@@ -63,6 +63,7 @@ public class AddConnectionWizard extends ConnectionDialogMediator implements Wiz
     private final String user;
     private final WizardDescriptor wd;
     private DatabaseConnection connection;
+    private String proposedConnectionDisplayName;
     private List<String> schemas = null;
     private String currentSchema;
     private JDBCDriver jdbcDriver;
@@ -242,6 +243,18 @@ public class AddConnectionWizard extends ConnectionDialogMediator implements Wiz
     void setDatabaseConnection(DatabaseConnection conn) {
         this.connection = conn;
     }
+
+    void setProposedConnectionDisplayName(String proposedConnectionDisplayName) {
+        this.proposedConnectionDisplayName = proposedConnectionDisplayName;
+    }
+
+    /**
+     * Get the proposed display name for this connection, not including information about the
+     * username or schema.
+     */
+    String getProposedConnectionDisplayName() {
+        return proposedConnectionDisplayName;
+    }
     
     DatabaseConnection getDatabaseConnection() {
         return this.connection;
@@ -283,6 +296,7 @@ public class AddConnectionWizard extends ConnectionDialogMediator implements Wiz
             } catch (DatabaseException ex) {
             }
             connection = null;
+            proposedConnectionDisplayName = null;
         }
     }
 

@@ -65,6 +65,7 @@ public class NewConnectionPanel extends ConnectionDialog.FocusablePanel {
     
     private AddConnectionWizard wd;
     private DatabaseConnection connection;
+    private String proposedConnectionDisplayName;
     private ProgressHandle progressHandle;
     private Window window;
     private boolean updatingUrl = false;
@@ -652,6 +653,9 @@ public class NewConnectionPanel extends ConnectionDialog.FocusablePanel {
             assert (driver != null);
             connection.setDriverName(driver.getName());
             connection.setDriver(driver.getClassName());
+            proposedConnectionDisplayName = url.getProposedConnectionDisplayName();
+        } else {
+            proposedConnectionDisplayName = null;
         }
 
         connection.setDatabase(urlField.getText());
@@ -659,6 +663,10 @@ public class NewConnectionPanel extends ConnectionDialog.FocusablePanel {
         connection.setPassword(getPassword());
         connection.setRememberPassword(passwordCheckBox.isSelected());
         connection.setConnectionProperties(connectionProperties);
+    }
+
+    public String getProposedConnectionDisplayName() {
+        return proposedConnectionDisplayName;
     }
 
     private void resize() {
