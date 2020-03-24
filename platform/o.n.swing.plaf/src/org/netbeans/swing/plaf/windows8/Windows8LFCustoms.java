@@ -242,7 +242,7 @@ public final class Windows8LFCustoms extends LFCustoms {
 
             WORKPLACE_FILL, new Color(226, 223, 214),
 
-            DESKTOP_SPLITPANE_BORDER, BorderFactory.createEmptyBorder(4, 0, 0, 0),
+            DESKTOP_SPLITPANE_BORDER, BorderFactory.createEmptyBorder(0, 0, 0, 0),
             SLIDING_BUTTON_UI, "org.netbeans.swing.tabcontrol.plaf.WinVistaSlidingButtonUI",
 
             // progress component related
