@@ -302,9 +302,9 @@ implements Action, ContextAwareAction, ChangeListener, Runnable {
         final Map delegate;
         Reference<ContextAction>    owner;
         Reference<Object>   instDelegate = null;
-        StatefulMonitor enabler = null;
+        // StatefulMonitor enabler = null;
         ChangeListener weakEnableListener;
-        PropertyChangeListener weakActionListener;
+        // PropertyChangeListener weakActionListener;
         
         public Performer(Map delegate) {
             this.delegate = delegate;
@@ -347,7 +347,7 @@ implements Action, ContextAwareAction, ChangeListener, Runnable {
         }
         
         private Object delegate0(Lookup.Provider everything, List<?> data, boolean getAction) {
-            Object d = instDelegate != null ? instDelegate.get() : null;
+            instDelegate = null; Object d = instDelegate != null ? instDelegate.get() : null;
             if (d != null) {
                 if (getAction && (d instanceof Performer)) {
                     return ((Performer)d).delegate0(everything, data, getAction);
@@ -372,17 +372,17 @@ implements Action, ContextAwareAction, ChangeListener, Runnable {
         }
         
         void stopListeners() {
-            if (enabler != null) {
-                enabler.removeChangeListener(weakEnableListener);
-                weakEnableListener = null;
-            }
+            // if (enabler != null) {
+            //    enabler.removeChangeListener(weakEnableListener);
+            //    weakEnableListener = null;
+            // }
         }
 
         void startListeners() {
-            if (enabler != null) {
-                weakEnableListener = WeakListeners.change(this, enabler);
-                enabler.addChangeListener(weakEnableListener);
-            }
+            // if (enabler != null) {
+            //    weakEnableListener = WeakListeners.change(this, enabler);
+            //    enabler.addChangeListener(weakEnableListener);
+            // }
         }
         
         /**
@@ -391,10 +391,10 @@ implements Action, ContextAwareAction, ChangeListener, Runnable {
          */
         void detach() {
             stopListeners();
-            Object inst = instDelegate != null ? instDelegate.get() : null;
-            if (inst instanceof Action) {
-                ((Action)inst).removePropertyChangeListener(weakActionListener);
-            }
+            // Object inst = instDelegate != null ? instDelegate.get() : null;
+            // if (inst instanceof Action) {
+            //     ((Action)inst).removePropertyChangeListener(weakActionListener);
+            // }
         }
 
         @SuppressWarnings("unchecked")
